@@ -4,5 +4,5 @@ contents = "contents_test"
 def getTitle():
     return title
 
-def getContents:
+def getContents():
     return contents
