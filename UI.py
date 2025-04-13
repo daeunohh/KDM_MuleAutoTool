@@ -18,6 +18,9 @@ def on_run_click():
         return
 
     ret = webnavigator.run_task()
+    if ret == error.Error_Type.LOGINFAIL :
+        show_popup('로그인 실패, 아이디와 비밀번호를 확인해주세요.')
+
     return
 
 def on_stop_click():
