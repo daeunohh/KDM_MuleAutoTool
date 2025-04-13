@@ -9,30 +9,32 @@ from selenium.webdriver.support.ui import Select
 from options import Options 
 import threading
 import time
+from selenium.common.exceptions import UnexpectedAlertPresentException
 
-def is_title_valid(title):
-    if title == '':
+my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
+
+def is_id_valid(id):
+    if id == '':
         return False
     return True
 
-def is_valid_content(content):
-    if content == '':
-        return False
-    return True
-
-def set_title(_title):
-    if not is_title_valid(_title):
-        return error.Error_Type.TITLE
+def set_id(_id):
+    if not is_id_valid(_id):
+        return error.Error_Type.ID
     else :
-        Options.title = _title
+        Options.id = _id
         return error.Error_Type.NONE
 
-def set_contents(content1, content2):
-    if not is_valid_content(content1) and not is_valid_content(content2):
-        return error.Error_Type.CONTENT
+def is_valid_pw(pw):
+    if pw == '':
+        return False
+    return True
+
+def set_pw(_pw):
+    if not is_valid_pw(_pw) :
+        return error.Error_Type.PW
     else :
-        Options.contents.append(content1)
-        Options.contents.append(content2)
+        Options.pw = _pw
         return error.Error_Type.NONE
 ####################################################################
 
@@ -86,9 +88,30 @@ class StealthBot:
 
     def do_task(self):
         self.human_wait(3, 4)
-        self.click(By.ID, "bt-write")
+
+        self.go(my_bbs)
+        self.click_by_index(By.CLASS_NAME, "more-btn", 0)
+        self.human_wait(10,20)
+
+        rows = self.driver.find_elements(By.CSS_SELECTOR, "table.small-table tbody tr")
+        target_rows = []
+        for row in rows:
+            tds = row.find_elements(By.TAG_NAME, "td")
+            if not tds:
+                continue  # 첫 번째 row (헤더)는 제외됨
+
+            board_name = tds[0].text.strip()
+            if board_name == "합주실/연습실":
+                target_rows.append(row)
+        if len(target_rows) <= 2:
+            for row in target_rows:
+                title = row.find_element(By.TAG_NAME, "a").text
+                link = row.find_element(By.TAG_NAME, "a").get_attribute("href")
+                print("📌 제목:", title)
+                print("🔗 링크:", link)
+
         # Set post options first
-        self.set_options()
+        # self.set_options()
         # Insert title
         self.find_and_type(By.ID, "input-title", Options.title)
         # Insert contents
@@ -101,10 +124,16 @@ class StealthBot:
     
     def login(self):
         self.click(By.ID, "bt-write")
-        self.find_and_type(By.ID, "login-user-id", "5ekdmsdl")
-        self.find_and_type(By.ID, "login-user-pw", "d8e5d67ed^^")
+        self.find_and_type(By.ID, "login-user-id", Options.id)
+        self.find_and_type(By.ID, "login-user-pw", Options.pw)
         self.click(By.CSS_SELECTOR, "a.login-bt.login")
-        return
+        self.human_wait(2,3)
+        try:
+            print("✅ 로그인 성공")
+            return error.Error_Type.NONE
+        except UnexpectedAlertPresentException:
+            print("❌ 로그인 실패 (간접적으로 감지)")  # 예: 로그인 후에만 나오는 메뉴
+            return error.Error_Type.LOGINFAIL
 
     def set_options(self):
         self.find_and_select(By.ID, "input-category", Options.category)
@@ -139,6 +168,14 @@ class StealthBot:
         elem = self.driver.find_element(by, identifier)
         elem.click()
         self.human_wait(1, 2)
+
+    def click_by_index(self, by, identifier, index):
+        elements = self.driver.find_elements(by, identifier)
+        if index < len(elements):
+            elements[index].click()
+            self.human_wait(0.5, 1)
+        else:
+            print(f"❌ 해당 인덱스 {index}의 버튼이 없습니다.")
 
     def find_and_select(self, by, identifier, visible_text):
         element = self.driver.find_element(by, identifier)
@@ -191,9 +228,6 @@ def run_task():
 
     # 스레드로 반복 작업 시작
     threading.Thread(target=periodic_task, daemon=True).start()
-    # 이부분만 6시간 마다 돌리기
-    bot.do_task()    
-    #여기까지
     
     bot.close()
 

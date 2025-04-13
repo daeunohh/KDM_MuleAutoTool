@@ -1,4 +1,6 @@
 class Options:
+    id = ''
+    pw = ''
     title = ''
     contents = []
     category = '개인연습실'
