@@ -95,10 +95,12 @@ class StealthBot:
         self.human_wait(3, 4)
 
         self.go(my_bbs)
-        self.click_by_index(By.CLASS_NAME, "more-btn", 0)
+        self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
         self.human_wait(10,20)
 
-        rows = self.driver.find_elements(By.CSS_SELECTOR, "table.small-table tbody tr")
+        box = self.driver.find_elements(By.CSS_SELECTOR, "div.mymule-box")[3]
+        rows = box.find_elements(By.CSS_SELECTOR, "table.small-table tbody tr")
+        # rows = self.driver.find_elements(By.CSS_SELECTOR, "table.small-table tbody tr")
         target_rows = []
         for row in rows:
             tds = row.find_elements(By.TAG_NAME, "td")
@@ -108,13 +110,13 @@ class StealthBot:
             board_name = tds[0].text.strip()
             if board_name == "합주실/연습실":
                 target_rows.append(row)
-        print("👉 현재 끌올 예정 글 갯수:",  len(target_rows))
+        # print("👉 현재 끌올 예정 글 갯수:",  len(target_rows))
         if len(target_rows) <= 2:
             for row in target_rows:
                 try:
                     link_element = row.find_element(By.TAG_NAME, "a")
                     title = link_element.text
-                    print("👉 제목 클릭:", title)
+                    print("👉 현재 끌올 중 인 글:", title)
 
                     # 클릭 (같은 탭에서 열림)
                     link_element.click()
@@ -133,8 +135,8 @@ class StealthBot:
                         if "6시간 이후에 가능합니다" in alert_text:
                             print("❌ 최신글 등록 실패 (쿨타임 중)")
                         else:
+                            alert.accept()  # 확인 눌러서 닫기
                             print("✅ 최신글 등록 성공")
-
                         alert.accept()  # 확인 눌러서 닫기
 
                     except NoAlertPresentException:
@@ -143,6 +145,9 @@ class StealthBot:
                     except UnexpectedAlertPresentException as e:
                         print("❌ 예외 발생:", e)
 
+                    except Exception as e:
+                        print("❌ 예외 발생:", e)
+                    
                     finally:
                         self.driver.back()
                         self.human_wait(2, 3)
