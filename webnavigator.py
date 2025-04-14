@@ -15,7 +15,7 @@ from selenium.webdriver.common.alert import Alert
 
 app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
-running = False
+status = 'idle'
 
 def set_app(_app):
     global app
@@ -46,35 +46,35 @@ def set_pw(_pw):
         return error.Error_Type.NONE
 ####################################################################
 
-class SeleniumBot:
-    def __init__(self, driver_path="chromedriver.exe"):
-        service = Service(executable_path=driver_path)
-        self.driver = webdriver.Chrome(service=service)
+# class SeleniumBot:
+#     def __init__(self, driver_path="chromedriver.exe"):
+#         service = Service(executable_path=driver_path)
+#         self.driver = webdriver.Chrome(service=service)
 
-    def open(self, url):
-        self.driver.get(url)
+#     def open(self, url):
+#         self.driver.get(url)
 
-    def open_mule(self):
-        self.open('https://www.mule.co.kr/')
+#     def open_mule(self):
+#         self.open('https://www.mule.co.kr/')
 
-    def search_google(self, keyword):
-        self.driver.get("https://www.google.com")
-        box = self.driver.find_element(By.NAME, "q")
-        box.send_keys(keyword)
-        box.submit()
+#     def search_google(self, keyword):
+#         self.driver.get("https://www.google.com")
+#         box = self.driver.find_element(By.NAME, "q")
+#         box.send_keys(keyword)
+#         box.submit()
 
-    def click_by_text(self, tag, text):
-        elements = self.driver.find_elements(By.TAG_NAME, tag)
-        for e in elements:
-            if text in e.text:
-                e.click()
-                break
+#     def click_by_text(self, tag, text):
+#         elements = self.driver.find_elements(By.TAG_NAME, tag)
+#         for e in elements:
+#             if text in e.text:
+#                 e.click()
+#                 break
 
-    def wait(self, seconds):
-        time.sleep(seconds)
+#     def wait(self, seconds):
+#         time.sleep(seconds)
 
-    def close(self):
-        self.driver.quit()  
+#     def close(self):
+#         self.driver.quit()  
 
 class StealthBot:
     def __init__(self, headless=False):
@@ -87,11 +87,7 @@ class StealthBot:
         options.add_argument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36"
         )
-
-        # options.add_argument("--user-data-dir=C:/Users/사용자이름/AppData/Local/Google/Chrome/User Data")
-        # options.add_argument("--profile-directory=Default")  # 또는 "Profile 1", "Profile 2" 등
-
-
+        
         self.driver = uc.Chrome(options=options)
 
     def do_task(self):
@@ -255,40 +251,67 @@ class StealthBot:
 
 ####################################################################
 def stop_task():
-    global running
-    running = False
-    return
+    global status
+    if status == 'running':
+        print("🚨 최신글 등록 작업 중에는 중지 불가합니다.")
+        print("중지를 원하시면 크롬창을 닫아주세요.")
+        return True
+    status = 'stopped'
+    return False
 
 def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
+    global status
+    status = 'running'
+
     bot = StealthBot()
     bot.go('https://www.mule.co.kr/bbs/info/room')
     
     # Login
-    res = bot.login()
-    if res == error.Error_Type.LOGINFAIL:
+    try:
+        res = bot.login()
+        if res == error.Error_Type.LOGINFAIL:
+            bot.quit()
+            if on_login_fail:
+                app.after(0, on_login_fail)
+            return
+    except Exception as e:
+        print("❌ 로그인 중 예외 발생:")
+        status = 'idle'
         bot.quit()
-        if on_login_fail:
-            app.after(0, on_login_fail)
+        if on_all_done:
+            app.after(0, on_all_done)
         return
 
     def periodic_task():
-        global running
-        while running:
-            bot.do_task()
+        global status
+        status = 'running'
+
+        while status == 'running':
+            try:
+                status = 'running'
+                bot.do_task()
+            except Exception as e:
+                print("❌ do_task 중 예외 발생:")
+                status = 'idle'
+                if on_all_done:
+                    app.after(0, on_all_done)
+                bot.quit()
+                return
 
             if on_task_finished:
                 app.after(0, on_task_finished)
 
-            for _ in range(1 * 60): 
-                if not running:
+            for _ in range(6 * 60 * 60): 
+                if status == 'stopped':
                     if on_all_done:
+                        status = 'idle'
                         bot.quit()
                         app.after(0, on_all_done)
                     return
+                status = 'idle'                
                 time.sleep(1)
 
-    global running
-    running = True
+
     # 스레드로 반복 작업 시작
     threading.Thread(target=periodic_task, daemon=True).start()
     return error.Error_Type.NONE

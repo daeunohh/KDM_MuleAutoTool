@@ -3,6 +3,7 @@ import webnavigator
 import error
 import threading
 import sys
+import tkinter.messagebox as msgbox
 
 class TextRedirector:
     def __init__(self, widget):
@@ -69,33 +70,19 @@ def on_run_click():
         daemon=True
     ).start()
 
-# def on_run_click():
-#     set_ui_state(True)
-
-#     id = id_entry.get()
-#     if webnavigator.set_id(id) == error.Error_Type.ID:
-#         show_popup('아이디를 확인해주세요.')
-#         set_ui_state(False)
-#         return
-    
-#     pw = pw_entry.get()
-#     if webnavigator.set_pw(pw) == error.Error_Type.PW:
-#         show_popup('비밀번호를 확인해주세요.')
-#         set_ui_state(False)
-#         return
-
-#     ret = webnavigator.run_task()
-#     if ret == error.Error_Type.LOGINFAIL :
-#         show_popup('로그인 실패, 아이디와 비밀번호를 확인해주세요.')
-#         set_ui_state(False)
-#         return
-
-#     # app.after(1000, check_if_bot_stopped)
-
 def on_stop_click():
-    webnavigator.stop_task()
-    set_ui_state(False)
+    is_running = webnavigator.stop_task()
+    if not is_running:
+        set_ui_state(False)
     return
+
+def on_close():
+    if webnavigator.status == 'running':
+        if msgbox.askokcancel("종료 확인", "작업이 실행 중입니다. 정말 종료하시겠습니까?"):
+            webnavigator.status == 'idle'
+            app.destroy()
+    else:
+        app.destroy()
 
 ######################################################################
 
@@ -107,7 +94,9 @@ ctk.set_default_color_theme("blue")  # 또는 "green", "dark-blue" 등
 # 앱 생성
 app = ctk.CTk()
 app.geometry("400x440")
+app.resizable(False, False)
 app.title("Mule posting autotool")
+app.protocol("WM_DELETE_WINDOW", on_close)
 
 # 위젯 추가
 title_label = ctk.CTkLabel(app, text="물 홍보 자동화 프로그램", font=ctk.CTkFont(size=16, weight="bold"))
@@ -118,6 +107,7 @@ id_label = ctk.CTkLabel(app, text="아이디")
 id_label.pack(anchor="w", padx=20, pady=(20, 0))
 id_entry = ctk.CTkEntry(app, placeholder_text="아이디 입력")
 id_entry.pack(padx=20, fill="x")
+id_entry.insert(0, "Libera1")
 
 # PW 입력
 pw_label = ctk.CTkLabel(app, text="비밀번호")
