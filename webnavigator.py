@@ -16,15 +16,16 @@ from selenium.webdriver.common.alert import Alert
 app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
 status = 'idle'
+static_id = 'Libera1'
 
 def set_app(_app):
     global app
     app = _app
 
 def is_id_valid(id):
-    if id == '':
-        return False
-    return True
+    if static_id in id:
+        return True 
+    return False
 
 def set_id(_id):
     if not is_id_valid(_id):
