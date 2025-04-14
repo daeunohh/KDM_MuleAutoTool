@@ -9,9 +9,12 @@ from selenium.webdriver.support.ui import Select
 from options import Options 
 import threading
 import time
-from selenium.common.exceptions import UnexpectedAlertPresentException
+from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import UnexpectedAlertPresentException, NoAlertPresentException
+from selenium.webdriver.common.alert import Alert
 
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
+running = False
 
 def is_id_valid(id):
     if id == '':
@@ -105,20 +108,45 @@ class StealthBot:
                 target_rows.append(row)
         if len(target_rows) <= 2:
             for row in target_rows:
-                title = row.find_element(By.TAG_NAME, "a").text
-                link = row.find_element(By.TAG_NAME, "a").get_attribute("href")
-                print("📌 제목:", title)
-                print("🔗 링크:", link)
+                try:
+                    link_element = row.find_element(By.TAG_NAME, "a")
+                    title = link_element.text
+                    print("👉 제목 클릭:", title)
 
-        # Set post options first
-        # self.set_options()
-        # Insert title
-        self.find_and_type(By.ID, "input-title", Options.title)
-        # Insert contents
-        self.write_to_editor(Options.contents[0])
+                    # 클릭 (같은 탭에서 열림)
+                    link_element.click()
+                    self.human_wait(2,3) 
+                    # 페이지 로딩 대기 (필요 시 WebDriverWait으로 바꿔도 됨)
 
-        self.check_checkbox(By.CSS_SELECTOR, "div.checker.pointer")
-        self.click(By.ID, "bt-save")
+                    try:
+                        self.click(By.XPATH, "//a[contains(text(), '최신글로 올리기')]")
+                        self.human_wait(3, 5)
+
+                        # 클릭 후 alert이 떠 있는지 확인
+                        alert = self.driver.switch_to.alert
+                        alert_text = alert.text
+                        print("🚨 알림창 감지:", alert_text)
+
+                        if "6시간 이후에 가능합니다" in alert_text:
+                            print("❌ 최신글 등록 실패 (쿨타임 중)")
+                        else:
+                            print("✅ 최신글 등록 성공")
+
+                        alert.accept()  # 확인 눌러서 닫기
+
+                    except NoAlertPresentException:
+                        print("✅ 알림 없이 최신글 등록 완료")
+
+                    except UnexpectedAlertPresentException as e:
+                        print("❌ 예외 발생:", e)
+
+                    finally:
+                        self.driver.back()
+                        self.human_wait(2, 3)
+
+                except NoSuchElementException:
+                    print("❌ 링크 클릭 실패: a 태그 없음")
+        
         self.human_wait(1)
         return
     
@@ -126,14 +154,26 @@ class StealthBot:
         self.click(By.ID, "bt-write")
         self.find_and_type(By.ID, "login-user-id", Options.id)
         self.find_and_type(By.ID, "login-user-pw", Options.pw)
-        self.click(By.CSS_SELECTOR, "a.login-bt.login")
-        self.human_wait(2,3)
         try:
+            self.click(By.CSS_SELECTOR, "a.login-bt.login")
+            self.human_wait(3, 5)
+
+            # 클릭 후 alert이 떠 있는지 확인
+            alert = self.driver.switch_to.alert
+            alert_text = alert.text
+            print("🚨 알림창 감지:", alert_text)
+            print("❌ 로그인 실패 (간접적으로 감지)")  # 예: 로그인 후에만 나오는 메뉴
+            alert.accept()  # 확인 눌러서 닫기
+
+            return error.Error_Type.LOGINFAIL         
+
+        except NoAlertPresentException:
             print("✅ 로그인 성공")
             return error.Error_Type.NONE
-        except UnexpectedAlertPresentException:
-            print("❌ 로그인 실패 (간접적으로 감지)")  # 예: 로그인 후에만 나오는 메뉴
-            return error.Error_Type.LOGINFAIL
+
+        except UnexpectedAlertPresentException as e:
+            print("❌ 예외 발생:", e)
+            return error.Error_Type.UNKNOWN
 
     def set_options(self):
         self.find_and_select(By.ID, "input-category", Options.category)
@@ -209,7 +249,8 @@ class StealthBot:
 
 ####################################################################
 def stop_task():
-    print('stop')
+    global running
+    running = False
     return
 
 def run_task():
@@ -219,16 +260,20 @@ def run_task():
     # Login
     res = bot.login()
     if res == error.Error_Type.LOGINFAIL:
+        bot.quit()
         return error.Error_Type.LOGINFAIL
 
     def periodic_task():
-        while True:
+        global running
+        running = True
+        while running:
             bot.do_task()
-            time.sleep(6 * 60 * 60)  # 6시간
+
+            for _ in range(6 * 60 * 60): 
+                if not running:
+                    return
+                time.sleep(1)
 
     # 스레드로 반복 작업 시작
     threading.Thread(target=periodic_task, daemon=True).start()
-    
-    bot.close()
-
-    return
+    return error.Error_Type.NONE

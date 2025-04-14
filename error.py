@@ -7,3 +7,5 @@ class Error_Type(StrEnum):
     ID = "id"
     PW = "password"
     LOGINFAIL = 'login fail'
+    POSTFAIL = 'post fail'
+    UNKNOWN = 'unknown'
