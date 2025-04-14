@@ -2,6 +2,19 @@ import customtkinter as ctk
 import webnavigator
 import error
 import threading
+import sys
+
+class TextRedirector:
+    def __init__(self, widget):
+        self.widget = widget
+
+    def write(self, text):
+        self.widget.insert("end", text)
+        self.widget.see("end")  # 항상 최신 로그가 보이게 스크롤
+
+    def flush(self):
+        pass  # 파일형 stdout의 flush() 대응용
+
 
 def set_ui_state(running: bool):
     if running:
@@ -20,15 +33,21 @@ def set_ui_state(running: bool):
 def show_popup(str):
     print(str)
 
-def check_if_bot_stopped():
-    global running
-    if not running:
-        set_ui_state(False)
-    else:
-        app.after(1000, check_if_bot_stopped)  # 1초 후 다시 확인
-
 def on_run_click():
     set_ui_state(True)
+    webnavigator.set_app(app)
+
+    id = id_entry.get()
+    if webnavigator.set_id(id) == error.Error_Type.ID:
+        show_popup('아이디를 확인해주세요.')
+        set_ui_state(False)
+        return
+    
+    pw = pw_entry.get()
+    if webnavigator.set_pw(pw) == error.Error_Type.PW:
+        show_popup('비밀번호를 확인해주세요.')
+        set_ui_state(False)
+        return
 
     def login_fail_callback():
         show_popup("로그인 실패, 아이디/비밀번호 확인")
@@ -135,6 +154,14 @@ run_button = ctk.CTkButton(button_frame, text="실행", fg_color="#3B82F6",
                            command=on_run_click)
 
 run_button.pack(side="right", padx=(10, 0))
+
+log_box = ctk.CTkTextbox(app, width=380, height=200)
+log_box.pack(padx=20, pady=10)
+
+sys.stdout = TextRedirector(log_box)
+sys.stderr = TextRedirector(log_box)
+
+print("✅ 봇 시작됨")
 
 # 실행
 app.mainloop()

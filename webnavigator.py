@@ -13,8 +13,13 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import UnexpectedAlertPresentException, NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
 
+app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
 running = False
+
+def set_app(_app):
+    global app
+    app = _app
 
 def is_id_valid(id):
     if id == '':
@@ -106,6 +111,7 @@ class StealthBot:
             board_name = tds[0].text.strip()
             if board_name == "합주실/연습실":
                 target_rows.append(row)
+        print("👉 현재 끌올 예정 글 갯수:",  len(target_rows))
         if len(target_rows) <= 2:
             for row in target_rows:
                 try:
@@ -253,7 +259,7 @@ def stop_task():
     running = False
     return
 
-def run_task():
+def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
     bot = StealthBot()
     bot.go('https://www.mule.co.kr/bbs/info/room')
     
@@ -261,19 +267,28 @@ def run_task():
     res = bot.login()
     if res == error.Error_Type.LOGINFAIL:
         bot.quit()
-        return error.Error_Type.LOGINFAIL
+        if on_login_fail:
+            app.after(0, on_login_fail)
+        return
 
     def periodic_task():
         global running
-        running = True
         while running:
             bot.do_task()
 
-            for _ in range(6 * 60 * 60): 
+            if on_task_finished:
+                app.after(0, on_task_finished)
+
+            for _ in range(1 * 60): 
                 if not running:
+                    if on_all_done:
+                        bot.quit()
+                        app.after(0, on_all_done)
                     return
                 time.sleep(1)
 
+    global running
+    running = True
     # 스레드로 반복 작업 시작
     threading.Thread(target=periodic_task, daemon=True).start()
     return error.Error_Type.NONE
