@@ -294,27 +294,29 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
     def periodic_task():
         global status
 
-        while  == 'idle' or status == 'running':
+        while True:
+            status = 'running'
             try:
-                status = 'running'
                 bot.do_task()
             except Exception as e:
                 print("❌ 끌올 작업 중 예외 발생:")
                 status = 'idle'
+                bot.quit()
                 if on_all_done:
                     app.after(0, on_all_done)
-                bot.quit()
                 return
 
             if on_task_finished:
                 app.after(0, on_task_finished)
 
-            status = 'idle'        
+            status = 'idle'
+
             for _ in range(loop_period_minute * 60): 
                 if status == 'stopped':
+                    print("🛑 중단됨")
+                    status = 'idle'
+                    bot.quit()
                     if on_all_done:
-                        status = 'idle'
-                        bot.quit()
                         app.after(0, on_all_done)
                     return        
                 time.sleep(1)
