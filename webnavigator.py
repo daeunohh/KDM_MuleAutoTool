@@ -12,6 +12,8 @@ import time
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import UnexpectedAlertPresentException, NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
@@ -97,6 +99,9 @@ class StealthBot:
 
         print("🔄 끌올 가능한 글 탐색 중...")
         self.go(my_bbs)
+        if not self.wait_for_element(By.CSS_SELECTOR, "div.more-btn.clickable", timeout=10)
+            print(f"❌ 마이뮬 페이지가 로딩되지 않았습니다.")
+            return
         self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
         self.human_wait(10,20)
 
@@ -218,6 +223,15 @@ class StealthBot:
         elem = self.driver.find_element(by, identifier)
         elem.click()
         self.human_wait(1, 2)
+
+    def wait_for_element(self, by, selector, timeout=10):
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                EC.element_to_be_clickable((by, selector))
+            )
+            return True
+        except:
+            return False
 
     def click_by_index(self, by, identifier, index):
         elements = self.driver.find_elements(by, identifier)
