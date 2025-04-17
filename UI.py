@@ -43,7 +43,7 @@ class TextRedirector:
     def _get_tag_for_line(self, line: str):
         if any(x in line for x in ["✅"]):
             return "success"
-        elif any(x in line for x in ["❌", "🚨"]):
+        elif any(x in line for x in ["❌", "🚨","🛑"]):
             return "error"
         elif any(x in line for x in ["🔄"]):
             return "status"

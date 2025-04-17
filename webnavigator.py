@@ -16,6 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException, NoSuchWindowException
 import traceback
+import socket
 
 app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
@@ -101,7 +102,8 @@ class StealthBot:
 
         print("🔄 끌올 가능한 글 탐색 중...")
         self.go(my_bbs)
-        if not self.wait_for_element(By.CSS_SELECTOR, "div.more-btn.clickable", timeout=10)
+        if not self.wait_for_element(By.CSS_SELECTOR, 
+                                     "div.more-btn.clickable", timeout=10):
             print(f"❌ 마이뮬 페이지가 로딩되지 않았습니다.")
             return
         self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
@@ -299,7 +301,7 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
             if on_login_fail:
                 app.after(0, on_login_fail)
             return
-    except (NoSuchWindowException, WebDriverException):
+    except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error):
         print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
         status = 'idle'
         bot.quit()
