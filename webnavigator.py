@@ -14,6 +14,8 @@ from selenium.common.exceptions import UnexpectedAlertPresentException, NoAlertP
 from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import WebDriverException, NoSuchWindowException
+import traceback
 
 app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
@@ -297,8 +299,16 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
             if on_login_fail:
                 app.after(0, on_login_fail)
             return
+    except (NoSuchWindowException, WebDriverException):
+        print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+        status = 'idle'
+        bot.quit()
+        if on_all_done:
+            app.after(0, on_all_done)
+        return
     except Exception as e:
-        print("❌ 로그인 중 예외 발생:")
+        print("❌ 로그인 중 예외 발생:", e)
+        traceback.print_exc()
         status = 'idle'
         bot.quit()
         if on_all_done:
@@ -312,8 +322,16 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
             status = 'running'
             try:
                 bot.do_task()
+            except (NoSuchWindowException, WebDriverException):
+                print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+                status = 'idle'
+                bot.quit()
+                if on_all_done:
+                    app.after(0, on_all_done)
+                return
             except Exception as e:
-                print("❌ 끌올 작업 중 예외 발생:")
+                print("❌ 끌올 작업 중 예외 발생:", e)
+                traceback.print_exc()
                 status = 'idle'
                 bot.quit()
                 if on_all_done:
