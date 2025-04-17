@@ -16,14 +16,15 @@ from selenium.webdriver.common.alert import Alert
 app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
 status = 'idle'
-static_id = 'Libera1'
+static_id = 'Libera2'
+loop_period_minute = 1 #6 * 60
 
 def set_app(_app):
     global app
     app = _app
 
 def is_id_valid(id):
-    if static_id in id:
+    if static_id in id or '5ekdmsdl' in id:
         return True 
     return False
 
@@ -94,6 +95,7 @@ class StealthBot:
     def do_task(self):
         self.human_wait(3, 4)
 
+        print("🔄 끌올 가능한 글 탐색 중...")
         self.go(my_bbs)
         self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
         self.human_wait(10,20)
@@ -110,13 +112,13 @@ class StealthBot:
             board_name = tds[0].text.strip()
             if board_name == "합주실/연습실":
                 target_rows.append(row)
-        # print("👉 현재 끌올 예정 글 갯수:",  len(target_rows))
+        print("🔄 현재 끌올 예정 글 갯수:",  len(target_rows))
         if len(target_rows) <= 2:
             for row in target_rows:
                 try:
                     link_element = row.find_element(By.TAG_NAME, "a")
                     title = link_element.text
-                    print("👉 현재 끌올 중 인 글:", title)
+                    print("🔄 현재 끌올 중 인 글:", title)
 
                     # 클릭 (같은 탭에서 열림)
                     link_element.click()
@@ -130,7 +132,7 @@ class StealthBot:
                         # 클릭 후 alert이 떠 있는지 확인
                         alert = self.driver.switch_to.alert
                         alert_text = alert.text
-                        print("🚨 알림창 감지:", alert_text)
+                        print("🔄 알림창 감지:", alert_text)
 
                         if "6시간 이후에 가능합니다" in alert_text:
                             print("❌ 최신글 등록 실패 (쿨타임 중)")
@@ -169,8 +171,8 @@ class StealthBot:
             # 클릭 후 alert이 떠 있는지 확인
             alert = self.driver.switch_to.alert
             alert_text = alert.text
-            print("🚨 알림창 감지:", alert_text)
-            print("❌ 로그인 실패 (간접적으로 감지)")  # 예: 로그인 후에만 나오는 메뉴
+            print("🔄 알림창 감지:", alert_text)
+            # print("❌ 로그인 실패 (간접적으로 감지)")  # 예: 로그인 후에만 나오는 메뉴
             alert.accept()  # 확인 눌러서 닫기
 
             return error.Error_Type.LOGINFAIL         
@@ -259,8 +261,7 @@ class StealthBot:
 def stop_task():
     global status
     if status == 'running':
-        print("🚨 최신글 등록 작업 중에는 중지 불가합니다.")
-        print("중지를 원하시면 크롬창을 닫아주세요.")
+        print("🚨 최신글 등록 작업 중에는 중지 불가합니다. 중지를 원하시면 크롬창을 닫아주세요.")
         return True
     status = 'stopped'
     return False
@@ -268,12 +269,14 @@ def stop_task():
 def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
     global status
     status = 'running'
+    print("✅ 봇 실행")
 
     bot = StealthBot()
     bot.go('https://www.mule.co.kr/bbs/info/room')
     
     # Login
     try:
+        print("🔄 로그인 시도 중...")
         res = bot.login()
         if res == error.Error_Type.LOGINFAIL:
             bot.quit()
@@ -290,14 +293,13 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
 
     def periodic_task():
         global status
-        status = 'running'
 
-        while status == 'running':
+        while  == 'idle' or status == 'running':
             try:
                 status = 'running'
                 bot.do_task()
             except Exception as e:
-                print("❌ do_task 중 예외 발생:")
+                print("❌ 끌올 작업 중 예외 발생:")
                 status = 'idle'
                 if on_all_done:
                     app.after(0, on_all_done)
@@ -307,14 +309,14 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
             if on_task_finished:
                 app.after(0, on_task_finished)
 
-            for _ in range(6 * 60 * 60): 
+            status = 'idle'        
+            for _ in range(loop_period_minute * 60): 
                 if status == 'stopped':
                     if on_all_done:
                         status = 'idle'
                         bot.quit()
                         app.after(0, on_all_done)
-                    return
-                status = 'idle'                
+                    return        
                 time.sleep(1)
 
 

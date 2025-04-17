@@ -1,0 +1,1 @@
+pyinstaller --noconsole --name=Mule_posting_AutoTool --onefile UI.py

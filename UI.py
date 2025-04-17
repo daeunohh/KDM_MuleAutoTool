@@ -4,18 +4,50 @@ import error
 import threading
 import sys
 import tkinter.messagebox as msgbox
+from datetime import datetime
+
 
 class TextRedirector:
     def __init__(self, widget):
         self.widget = widget
+        self._buffer = ""
+        self._line_count = 0  # 줄 번호 추적
+
+        # 태그 색상 설정
+        self.widget.tag_config("info", foreground="lightgray")
+        self.widget.tag_config("success", foreground="lightgreen")
+        self.widget.tag_config("error", foreground="tomato")
+        self.widget.tag_config("status", foreground="skyblue")
 
     def write(self, text):
-        self.widget.insert("end", text)
-        self.widget.see("end")  # 항상 최신 로그가 보이게 스크롤
+        self._buffer += text
+        while "\n" in self._buffer:
+            line, self._buffer = self._buffer.split("\n", 1)
+            self._insert_line(line)
 
-    def flush(self):
-        pass  # 파일형 stdout의 flush() 대응용
+    def _insert_line(self, line: str):
+        if not line.strip():
+            return
 
+        timestamp = datetime.now().strftime("[%H:%M:%S]")
+        full_line = f"{timestamp} {line.strip()}\n"
+
+        tag = self._get_tag_for_line(line)
+
+        start_index = self.widget.index("end-1c")
+        self.widget.insert("end", full_line)
+        end_index = self.widget.index("end-1c")
+        self.widget.tag_add(tag, start_index, end_index)
+        self.widget.see("end")
+
+    def _get_tag_for_line(self, line: str):
+        if any(x in line for x in ["✅"]):
+            return "success"
+        elif any(x in line for x in ["❌", "🚨"]):
+            return "error"
+        elif any(x in line for x in ["🔄"]):
+            return "status"
+        return "info"
 
 def set_ui_state(running: bool):
     if running:
@@ -31,34 +63,31 @@ def set_ui_state(running: bool):
         run_button.configure(state="normal")
         stop_button.configure(state="disabled")
 
-def show_popup(str):
-    print(str)
-
 def on_run_click():
     set_ui_state(True)
     webnavigator.set_app(app)
 
     id = id_entry.get()
     if webnavigator.set_id(id) == error.Error_Type.ID:
-        show_popup('아이디를 확인해주세요.')
+        print("❌ 아이디를 확인해주세요.")
         set_ui_state(False)
         return
     
     pw = pw_entry.get()
     if webnavigator.set_pw(pw) == error.Error_Type.PW:
-        show_popup('비밀번호를 확인해주세요.')
+        print("❌ 비밀번호를 확인해주세요.")
         set_ui_state(False)
         return
 
     def login_fail_callback():
-        show_popup("로그인 실패, 아이디/비밀번호 확인")
+        print("❌ 로그인 실패, 아이디/비밀번호 확인")
         set_ui_state(False)
 
     def task_finished_callback():
-        print("🌀 작업 1회 완료")
+        print("✅ 작업 1회 완료")
 
     def all_done_callback():
-        show_popup("작업 중단됨")
+        print("✅ 작업 중단됨")
         set_ui_state(False)
 
     threading.Thread(
@@ -79,7 +108,6 @@ def on_stop_click():
 def on_close():
     if webnavigator.status == 'running':
         if msgbox.askokcancel("종료 확인", "작업이 실행 중입니다. 정말 종료하시겠습니까?"):
-            webnavigator.status == 'idle'
             app.destroy()
     else:
         app.destroy()
@@ -107,7 +135,7 @@ id_label = ctk.CTkLabel(app, text="아이디")
 id_label.pack(anchor="w", padx=20, pady=(20, 0))
 id_entry = ctk.CTkEntry(app, placeholder_text="아이디 입력")
 id_entry.pack(padx=20, fill="x")
-id_entry.insert(0, "Libera1")
+id_entry.insert(0, "Libera2")
 
 # PW 입력
 pw_label = ctk.CTkLabel(app, text="비밀번호")
