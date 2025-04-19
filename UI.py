@@ -5,7 +5,8 @@ import threading
 import sys
 import tkinter.messagebox as msgbox
 from datetime import datetime
-
+version_string = "1.02"
+n = 0
 
 class TextRedirector:
     def __init__(self, widget):
@@ -84,10 +85,14 @@ def on_run_click():
         set_ui_state(False)
 
     def task_finished_callback():
-        print("✅ 작업 1회 완료")
+        global n
+        n += 1
+        print("✅ 작업 " + str(n) + "회 완료")
 
     def all_done_callback():
+        global n
         print("✅ 작업 중단됨")
+        n = 0
         set_ui_state(False)
 
     threading.Thread(
@@ -127,7 +132,7 @@ app.title("Mule posting autotool")
 app.protocol("WM_DELETE_WINDOW", on_close)
 
 # 위젯 추가
-title_label = ctk.CTkLabel(app, text="물 홍보 자동화 프로그램", font=ctk.CTkFont(size=16, weight="bold"))
+title_label = ctk.CTkLabel(app, text="물 홍보 자동화 프로그램 ver" + version_string, font=ctk.CTkFont(size=16, weight="bold"))
 title_label.pack(pady=(10, 5))
 
 # ID 입력
