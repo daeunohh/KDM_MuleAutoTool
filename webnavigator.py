@@ -292,6 +292,15 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
     bot = StealthBot()
     bot.go('https://www.mule.co.kr/bbs/info/room')
     
+    def safe_shutdown(message=None):
+        global status
+        status = 'idle'
+        if message:
+            print(message)
+        bot.quit()
+        if on_all_done:
+            app.after(0, on_all_done)
+
     # Login
     try:
         print("🔄 로그인 시도 중...")
@@ -302,59 +311,72 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
                 app.after(0, on_login_fail)
             return
     except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error):
-        print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
-        status = 'idle'
-        bot.quit()
-        if on_all_done:
-            app.after(0, on_all_done)
+        safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+        # print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+        # status = 'idle'
+        # bot.quit()
+        # if on_all_done:
+        #     app.after(0, on_all_done)
         return
     except Exception as e:
         print("❌ 로그인 중 예외 발생:", e)
         traceback.print_exc()
-        status = 'idle'
-        bot.quit()
-        if on_all_done:
-            app.after(0, on_all_done)
+        safe_shutdown()
         return
+        # print("❌ 로그인 중 예외 발생:", e)
+        # traceback.print_exc()
+        # status = 'idle'
+        # bot.quit()
+        # if on_all_done:
+        #     app.after(0, on_all_done)
+        # return
 
     def periodic_task():
         global status
+        try:
+            while True:
+                status = 'running'
+                try:
+                    bot.do_task()
+                except (NoSuchWindowException, WebDriverException):
+                    safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+                    return
+                    # print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+                    # status = 'idle'
+                    # bot.quit()
+                    # if on_all_done:
+                    #     app.after(0, on_all_done)
+                except Exception as e:
+                    print("❌ 끌올 작업 중 예외 발생:", e)
+                    traceback.print_exc()
+                    safe_shutdown()
+                    return
+                    # print("❌ 끌올 작업 중 예외 발생:", e)
+                    # traceback.print_exc()
+                    # status = 'idle'
+                    # bot.quit()
+                    # if on_all_done:
+                    #     app.after(0, on_all_done)
+                    # return
 
-        while True:
-            status = 'running'
-            try:
-                bot.do_task()
-            except (NoSuchWindowException, WebDriverException):
-                print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+                if on_task_finished:
+                    app.after(0, on_task_finished)
+
                 status = 'idle'
-                bot.quit()
-                if on_all_done:
-                    app.after(0, on_all_done)
-                return
-            except Exception as e:
-                print("❌ 끌올 작업 중 예외 발생:", e)
-                traceback.print_exc()
-                status = 'idle'
-                bot.quit()
-                if on_all_done:
-                    app.after(0, on_all_done)
-                return
 
-            if on_task_finished:
-                app.after(0, on_task_finished)
-
-            status = 'idle'
-
-            for _ in range(loop_period_minute * 60): 
-                if status == 'stopped':
-                    print("🛑 중단됨")
-                    status = 'idle'
-                    bot.quit()
-                    if on_all_done:
-                        app.after(0, on_all_done)
-                    return        
-                time.sleep(1)
-
+                for _ in range(loop_period_minute * 60): 
+                    if status == 'stopped':
+                        print("🛑 중단됨")
+                        status = 'idle'
+                        bot.quit()
+                        if on_all_done:
+                            app.after(0, on_all_done)
+                        return        
+                    time.sleep(1)
+        except Exception as e:
+            print("❌ periodic_task() 전체에서 예외 발생:", e)
+            traceback.print_exc()
+            safe_shutdown()
 
     # 스레드로 반복 작업 시작
     threading.Thread(target=periodic_task, daemon=True).start()
