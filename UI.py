@@ -5,7 +5,7 @@ import threading
 import sys
 import tkinter.messagebox as msgbox
 from datetime import datetime
-version_string = "1.02"
+version_string = "1.04"
 n = 0
 
 class TextRedirector:
@@ -19,6 +19,10 @@ class TextRedirector:
         self.widget.tag_config("success", foreground="lightgreen")
         self.widget.tag_config("error", foreground="tomato")
         self.widget.tag_config("status", foreground="skyblue")
+
+        # ✅ 로그 파일 이름 생성 (실행 시간 기준)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.log_filename = f"error_log_{timestamp}.txt"
 
     def write(self, text):
         self._buffer += text
@@ -40,6 +44,12 @@ class TextRedirector:
         end_index = self.widget.index("end-1c")
         self.widget.tag_add(tag, start_index, end_index)
         self.widget.see("end")
+
+        try:
+            with open(self.log_filename, "a", encoding="utf-8") as f:
+                f.write(full_line)
+        except Exception:
+            pass  # 파일 오류는 조용히 무시
 
     def _get_tag_for_line(self, line: str):
         if any(x in line for x in ["✅"]):
