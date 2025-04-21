@@ -102,12 +102,14 @@ class StealthBot:
 
         print("🔄 끌올 가능한 글 탐색 중...")
         self.go(my_bbs)
+        print("🔄 마이뮬 사이트 이동 완료")
         if not self.wait_for_element(By.CSS_SELECTOR, 
                                      "div.more-btn.clickable", timeout=10):
             print(f"❌ 마이뮬 페이지가 로딩되지 않았습니다.")
             return
         self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
         self.human_wait(10,20)
+        print("🔄 내글 로딩 완료")
 
         box = self.driver.find_elements(By.CSS_SELECTOR, "div.mymule-box")[3]
         rows = box.find_elements(By.CSS_SELECTOR, "table.small-table tbody tr")
@@ -131,11 +133,13 @@ class StealthBot:
 
                     # 클릭 (같은 탭에서 열림)
                     link_element.click()
+                    print("🔄 글 페이지로 이동")
                     self.human_wait(2,3) 
                     # 페이지 로딩 대기 (필요 시 WebDriverWait으로 바꿔도 됨)
 
                     try:
                         self.click(By.XPATH, "//a[contains(text(), '최신글로 올리기')]")
+                        print("🔄 최신글 등록 클릭")
                         self.human_wait(3, 5)
 
                         # 클릭 후 alert이 떠 있는지 확인
@@ -161,6 +165,7 @@ class StealthBot:
                     
                     finally:
                         self.driver.back()
+                        print("🔄 뒤로 가기")
                         self.human_wait(2, 3)
 
                 except NoSuchElementException:
@@ -335,6 +340,7 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
         global status
         try:
             while True:
+                print('✅ 작업 시작됨')
                 status = 'running'
                 try:
                     bot.do_task()
@@ -364,7 +370,8 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
 
                 status = 'idle'
 
-                for _ in range(loop_period_minute * 60): 
+                print('✅ 6시간 후에 다시 시작합니다.')
+                for i in range(loop_period_minute * 60): 
                     if status == 'stopped':
                         print("🛑 중단됨")
                         status = 'idle'
@@ -372,6 +379,12 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
                         if on_all_done:
                             app.after(0, on_all_done)
                         return        
+
+                    # ✅ 1시간마다 남은 시간 출력
+                    if i % 3600 == 0 and i != 0:
+                        hours_left = (loop_period_minute * 60 - i) // 3600
+                        print(f"⌛ {hours_left}시간 남았습니다.")
+                        
                     time.sleep(1)
         except Exception as e:
             print("❌ periodic_task() 전체에서 예외 발생:", e)
