@@ -5,7 +5,7 @@ import threading
 import sys
 import tkinter.messagebox as msgbox
 from datetime import datetime
-version_string = "1.04"
+version_string = "1.05"
 n = 0
 
 class TextRedirector:
