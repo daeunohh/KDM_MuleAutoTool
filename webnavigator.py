@@ -17,6 +17,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException, NoSuchWindowException
 import traceback
 import socket
+from selenium.common.exceptions import TimeoutException
 
 app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
@@ -99,16 +100,15 @@ class StealthBot:
 
     def do_task(self):
         self.human_wait(3, 4)
-
-        print("🔄 끌올 가능한 글 탐색 중...")
         self.go(my_bbs)
         print("🔄 마이뮬 사이트 이동 완료")
+        print("🔄 끌올 가능한 글 탐색 중...")
         if not self.wait_for_element(By.CSS_SELECTOR, 
                                      "div.more-btn.clickable", timeout=10):
             print(f"❌ 마이뮬 페이지가 로딩되지 않았습니다.")
             return
         self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
-        self.human_wait(10,20)
+        self.human_wait(30,60)
         print("🔄 내글 로딩 완료")
 
         box = self.driver.find_elements(By.CSS_SELECTOR, "div.mymule-box")[3]
