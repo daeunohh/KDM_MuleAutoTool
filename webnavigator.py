@@ -107,23 +107,28 @@ class StealthBot:
             print(f"❌ 마이뮬 페이지가 로딩되지 않았습니다.")
             return
         print("🔄 끌올 가능한 글 탐색 중...")
-        self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
-        self.human_wait(40,60)
-        print("🔄 내글 로딩 완료")
 
-        box = self.driver.find_elements(By.CSS_SELECTOR, "div.mymule-box")[3]
-        rows = box.find_elements(By.CSS_SELECTOR, "table.small-table tbody tr")
-        # rows = self.driver.find_elements(By.CSS_SELECTOR, "table.small-table tbody tr")
-        target_rows = []
-        for row in rows:
-            tds = row.find_elements(By.TAG_NAME, "td")
-            if not tds:
-                continue  # 첫 번째 row (헤더)는 제외됨
+        for attempt in range(3):
+            self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
+            self.human_wait(40, 60)
+            print(f"🔄 내글 로딩 시도 {attempt+1}회차 완료")
 
-            board_name = tds[0].text.strip()
-            if board_name == "합주실/연습실":
-                target_rows.append(row)
-        print("🔄 현재 끌올 예정 글 갯수:",  len(target_rows))
+            box = self.driver.find_elements(By.CSS_SELECTOR, "div.mymule-box")[3]
+            rows = box.find_elements(By.CSS_SELECTOR, "table.small-table tbody tr")
+
+            target_rows = []
+            for row in rows:
+                tds = row.find_elements(By.TAG_NAME, "td")
+                if not tds:
+                    continue
+                board_name = tds[0].text.strip()
+                if board_name == "합주실/연습실":
+                    target_rows.append(row)
+
+            print("🔄 현재 끌올 예정 글 갯수:", len(target_rows))
+            if len(target_rows) > 0:
+                break  # ✅ 글이 있으면 반복 종료
+            
         if len(target_rows) <= 2:
             for row in target_rows:
                 try:
