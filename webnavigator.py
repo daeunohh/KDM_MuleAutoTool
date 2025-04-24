@@ -98,7 +98,7 @@ class StealthBot:
         self.driver = uc.Chrome(options=options)
 
     def do_task(self):
-        self.human_wait(3, 4)
+        self.human_wait(5, 10)
 
         print("🔄 끌올 가능한 글 탐색 중...")
         self.go(my_bbs)
@@ -134,13 +134,13 @@ class StealthBot:
                     # 클릭 (같은 탭에서 열림)
                     link_element.click()
                     print("🔄 글 페이지로 이동")
-                    self.human_wait(2,3) 
+                    self.human_wait(5, 10)
                     # 페이지 로딩 대기 (필요 시 WebDriverWait으로 바꿔도 됨)
 
                     try:
                         self.click(By.XPATH, "//a[contains(text(), '최신글로 올리기')]")
                         print("🔄 최신글 등록 클릭")
-                        self.human_wait(3, 5)
+                        self.human_wait(10, 20)
 
                         # 클릭 후 alert이 떠 있는지 확인
                         alert = self.driver.switch_to.alert
@@ -166,12 +166,11 @@ class StealthBot:
                     finally:
                         self.driver.back()
                         print("🔄 뒤로 가기")
-                        self.human_wait(2, 3)
+                    self.human_wait(5, 10)
 
                 except NoSuchElementException:
                     print("❌ 링크 클릭 실패: a 태그 없음")
-        
-        self.human_wait(1)
+        self.human_wait(5, 10)
         return
     
     def login(self):
@@ -211,7 +210,7 @@ class StealthBot:
 
     def go(self, url):
         self.driver.get(url)
-        self.human_wait(2, 3)
+        self.human_wait(5, 10)
 
     def find_and_type(self, by, identifier, text):
         elem = self.driver.find_element(by, identifier)
@@ -246,7 +245,7 @@ class StealthBot:
         elements = self.driver.find_elements(by, identifier)
         if index < len(elements):
             elements[index].click()
-            self.human_wait(0.5, 1)
+            self.human_wait(2, 3)
         else:
             print(f"❌ 해당 인덱스 {index}의 버튼이 없습니다.")
 
