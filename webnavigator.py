@@ -237,7 +237,7 @@ class StealthBot:
     def click(self, by, identifier):
         elem = self.driver.find_element(by, identifier)
         elem.click()
-        self.human_wait(1, 2)
+        self.human_wait(3, 5)
 
     def wait_for_element(self, by, selector, timeout=10):
         try:
@@ -252,7 +252,7 @@ class StealthBot:
         elements = self.driver.find_elements(by, identifier)
         if index < len(elements):
             elements[index].click()
-            self.human_wait(2, 3)
+            self.human_wait(5, 10)
         else:
             print(f"❌ 해당 인덱스 {index}의 버튼이 없습니다.")
 
