@@ -53,38 +53,6 @@ def set_pw(_pw):
         Options.pw = _pw
         return error.Error_Type.NONE
 
-####################################################################
-
-# class SeleniumBot:
-#     def __init__(self, driver_path="chromedriver.exe"):
-#         service = Service(executable_path=driver_path)
-#         self.driver = webdriver.Chrome(service=service)
-
-#     def open(self, url):
-#         self.driver.get(url)
-
-#     def open_mule(self):
-#         self.open('https://www.mule.co.kr/')
-
-#     def search_google(self, keyword):
-#         self.driver.get("https://www.google.com")
-#         box = self.driver.find_element(By.NAME, "q")
-#         box.send_keys(keyword)
-#         box.submit()
-
-#     def click_by_text(self, tag, text):
-#         elements = self.driver.find_elements(By.TAG_NAME, tag)
-#         for e in elements:
-#             if text in e.text:
-#                 e.click()
-#                 break
-
-#     def wait(self, seconds):
-#         time.sleep(seconds)
-
-#     def close(self):
-#         self.driver.quit()  
-
 class StealthBot:
     def __init__(self, headless=False):
         options = uc.ChromeOptions()
@@ -98,7 +66,7 @@ class StealthBot:
         )
 
         self.driver = uc.Chrome(options=options)        
-        
+
     def do_task(self):
         self.human_wait(5, 10)
 
@@ -326,24 +294,12 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
             return
     except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error) as e:
         safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + e)
-        # print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
-        # status = 'idle'
-        # bot.quit()
-        # if on_all_done:
-        #     app.after(0, on_all_done)
         return
     except Exception as e:
         print("❌ 로그인 중 예외 발생:", e)
         traceback.print_exc()
         safe_shutdown()
         return
-        # print("❌ 로그인 중 예외 발생:", e)
-        # traceback.print_exc()
-        # status = 'idle'
-        # bot.quit()
-        # if on_all_done:
-        #     app.after(0, on_all_done)
-        # return
 
     def periodic_task():
         global status
@@ -356,23 +312,11 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
                 except (NoSuchWindowException, WebDriverException) as e:
                     safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + e)
                     return
-                    # print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
-                    # status = 'idle'
-                    # bot.quit()
-                    # if on_all_done:
-                    #     app.after(0, on_all_done)
                 except Exception as e:
                     print("❌ 끌올 작업 중 예외 발생:", e)
                     traceback.print_exc()
                     safe_shutdown()
                     return
-                    # print("❌ 끌올 작업 중 예외 발생:", e)
-                    # traceback.print_exc()
-                    # status = 'idle'
-                    # bot.quit()
-                    # if on_all_done:
-                    #     app.after(0, on_all_done)
-                    # return
 
                 if on_task_finished:
                     app.after(0, on_task_finished)
