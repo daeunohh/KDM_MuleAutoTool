@@ -293,7 +293,7 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
                 app.after(0, on_login_fail)
             return
     except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error) as e:
-        safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + e)
+        safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
         return
     except Exception as e:
         print("❌ 로그인 중 예외 발생:", e)
@@ -310,7 +310,7 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
                 try:
                     bot.do_task()
                 except (NoSuchWindowException, WebDriverException) as e:
-                    safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + e)
+                    safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
                     return
                 except Exception as e:
                     print("❌ 끌올 작업 중 예외 발생:", e)
