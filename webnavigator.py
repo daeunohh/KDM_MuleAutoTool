@@ -52,6 +52,7 @@ def set_pw(_pw):
     else :
         Options.pw = _pw
         return error.Error_Type.NONE
+
 ####################################################################
 
 # class SeleniumBot:
@@ -95,9 +96,9 @@ class StealthBot:
         options.add_argument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36"
         )
-        
-        self.driver = uc.Chrome(options=options)
 
+        self.driver = uc.Chrome(options=options)        
+        
     def do_task(self):
         self.human_wait(5, 10)
 
@@ -159,6 +160,7 @@ class StealthBot:
                         else:
                             alert.accept()  # 확인 눌러서 닫기
                             print("✅ 최신글 등록 성공")
+                        self.human_wait(8, 10)
                         alert.accept()  # 확인 눌러서 닫기
 
                     except NoAlertPresentException:
@@ -171,9 +173,10 @@ class StealthBot:
                         print("❌ 예외 발생:", e)
                     
                     finally:
+                        # self.go(my_bbs)
                         self.driver.back()
                         print("🔄 뒤로 가기")
-                    self.human_wait(5, 10)
+                    self.human_wait(10, 20)
 
                 except NoSuchElementException:
                     print("❌ 링크 클릭 실패: a 태그 없음")
@@ -321,8 +324,8 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
             if on_login_fail:
                 app.after(0, on_login_fail)
             return
-    except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error):
-        safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+    except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error) as e:
+        safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + e)
         # print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
         # status = 'idle'
         # bot.quit()
@@ -350,8 +353,8 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
                 status = 'running'
                 try:
                     bot.do_task()
-                except (NoSuchWindowException, WebDriverException):
-                    safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
+                except (NoSuchWindowException, WebDriverException) as e:
+                    safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + e)
                     return
                     # print("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다.")
                     # status = 'idle'
