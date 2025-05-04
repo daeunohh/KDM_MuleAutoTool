@@ -23,7 +23,7 @@ app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
 status = 'idle'
 static_id = 'Libera2'
-loop_period_minute = 6 * 60
+loop_period_minute = 1 #6 * 60
 
 def set_app(_app):
     global app
