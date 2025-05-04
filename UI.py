@@ -5,7 +5,7 @@ import threading
 import sys
 import tkinter.messagebox as msgbox
 from datetime import datetime
-version_string = "1.052"
+version_string = "1.06"
 n = 0
 
 class TextRedirector:
@@ -59,6 +59,9 @@ class TextRedirector:
         elif any(x in line for x in ["🔄"]):
             return "status"
         return "info"
+
+    def flush():
+        pass
 
 def set_ui_state(running: bool):
     if running:
@@ -196,5 +199,23 @@ sys.stderr = TextRedirector(log_box)
 
 print("✅ 봇 시작됨")
 
-# 실행
+# # 실행
+# import threading
+# import win32gui
+# import win32con
+# import time
+
+# def restore_if_minimized(window_title):
+#     hwnd = win32gui.FindWindow(None, window_title)
+#     if hwnd:
+#         if win32gui.IsIconic(hwnd):  # 최소화 상태면
+#             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)  # 복원
+
+# def keep_chrome_active():
+#     while True:
+#         restore_if_minimized("뮬 - 중고악기, 합주실, 개인레슨, ")  # 정확한 창 이름으로 바꿔야 함
+#         time.sleep(60)
+
+# threading.Thread(target=keep_chrome_active, daemon=True).start()
+
 app.mainloop()
