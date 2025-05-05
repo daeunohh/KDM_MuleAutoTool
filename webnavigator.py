@@ -23,7 +23,7 @@ app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
 status = 'idle'
 static_id = 'Libera2'
-loop_period_minute = 1 #6 * 60
+loop_period_minute = 6 * 60
 
 def set_app(_app):
     global app
@@ -66,19 +66,7 @@ class StealthBot:
         )
 
         self.driver = uc.Chrome(options=options)        
-
-    def do_task(self):
-        self.human_wait(5, 10)
-
-        print("🔄 끌올 가능한 글 탐색 중...")
-        self.go(my_bbs)
-        print("🔄 마이뮬 사이트 이동 완료")
-        if not self.wait_for_element(By.CSS_SELECTOR, 
-                                     "div.more-btn.clickable", timeout=10):
-            print(f"❌ 마이뮬 페이지가 로딩되지 않았습니다.")
-            return
-        print("🔄 끌올 가능한 글 탐색 중...")
-
+    def getPostList(self):
         for attempt in range(3):
             self.click_by_index(By.CSS_SELECTOR, "div.more-btn.clickable", 0)
             self.human_wait(40, 60)
@@ -98,57 +86,82 @@ class StealthBot:
 
             print("🔄 현재 끌올 예정 글 갯수:", len(target_rows))
             if len(target_rows) > 0:
-                break  # ✅ 글이 있으면 반복 종료
+                return target_rows # ✅ 글이 있으면 반복 종료
+    
+    def clickAndUpdate(self, row):
+        try:
+            link_element = row.find_element(By.TAG_NAME, "a")
+            title = link_element.text
+            print("🔄 현재 끌올 중 인 글:", title)
+
+            # 클릭 (같은 탭에서 열림)
+            link_element.click()
+            print("🔄 글 페이지로 이동")
+            self.human_wait(5, 10)
             
-        if len(target_rows) <= 2:
-            for row in target_rows:
-                try:
-                    link_element = row.find_element(By.TAG_NAME, "a")
-                    title = link_element.text
-                    print("🔄 현재 끌올 중 인 글:", title)
+            # 최신글 등록
+            try:
+                print("🔄 최신글 등록 클릭")
+                self.click(By.XPATH, "//a[contains(text(), '최신글로 올리기')]")
+                self.human_wait(10, 20)
 
-                    # 클릭 (같은 탭에서 열림)
-                    link_element.click()
-                    print("🔄 글 페이지로 이동")
-                    self.human_wait(5, 10)
-                    # 페이지 로딩 대기 (필요 시 WebDriverWait으로 바꿔도 됨)
+                # 클릭 후 alert이 떠 있는지 확인
+                alert = self.driver.switch_to.alert
+                alert_text = alert.text
+                print("🔄 알림창 감지:", alert_text)
 
-                    try:
-                        self.click(By.XPATH, "//a[contains(text(), '최신글로 올리기')]")
-                        print("🔄 최신글 등록 클릭")
-                        self.human_wait(10, 20)
+                if "6시간 이후에 가능합니다" in alert_text:
+                    print("❌ 최신글 등록 실패 (쿨타임 중)")
+                else:
+                    alert.accept()  # 확인 눌러서 닫기
+                    print("✅ 최신글 등록 성공")
+                self.human_wait(8, 10)
+                alert.accept()  # 확인 눌러서 닫기
 
-                        # 클릭 후 alert이 떠 있는지 확인
-                        alert = self.driver.switch_to.alert
-                        alert_text = alert.text
-                        print("🔄 알림창 감지:", alert_text)
+            except NoAlertPresentException:
+                print("✅ 알림 없이 최신글 등록 완료")
 
-                        if "6시간 이후에 가능합니다" in alert_text:
-                            print("❌ 최신글 등록 실패 (쿨타임 중)")
-                        else:
-                            alert.accept()  # 확인 눌러서 닫기
-                            print("✅ 최신글 등록 성공")
-                        self.human_wait(8, 10)
-                        alert.accept()  # 확인 눌러서 닫기
+            except UnexpectedAlertPresentException as e:
+                print("❌ 예외 발생:", e)
 
-                    except NoAlertPresentException:
-                        print("✅ 알림 없이 최신글 등록 완료")
+            except Exception as e:
+                print("❌ 예외 발생:", e)
+            self.human_wait(10, 20)
 
-                    except UnexpectedAlertPresentException as e:
-                        print("❌ 예외 발생:", e)
-
-                    except Exception as e:
-                        print("❌ 예외 발생:", e)
-                    
-                    finally:
-                        # self.go(my_bbs)
-                        self.driver.back()
-                        print("🔄 뒤로 가기")
-                    self.human_wait(10, 20)
-
-                except NoSuchElementException:
-                    print("❌ 링크 클릭 실패: a 태그 없음")
+        except NoSuchElementException:
+            print("❌ 링크 클릭 실패: a 태그 없음")
+    
+    def do_task(self):
         self.human_wait(5, 10)
+        processedTitles = set()
+
+        while len(processedTitles) < 2:
+            self.go(my_bbs)
+            print("🔄 마이뮬 사이트 이동 완료")
+            if not self.wait_for_element(By.CSS_SELECTOR, 
+                                        "div.more-btn.clickable", timeout=10):
+                print(f"❌ 마이뮬 페이지가 로딩되지 않았습니다.")
+                return
+            
+            # 글 탐색하기
+            print("🔄 끌올 가능한 글 탐색 중...")
+            target_rows = self.getPostList()
+
+            for row in target_rows:
+                link_element = row.find_element(By.TAG_NAME, "a")
+                title = link_element.text
+                
+                if title in processedTitles:
+                    continue
+                else:
+                    processedTitles.add(title)
+                    self.clickAndUpdate(row)
+                    break
+
+            self.human_wait(5, 10)
+        
+        print("✅ " + str(len(processedTitles)) + " 개 최신글 등록 완료")
+                    
         return
     
     def login(self):
@@ -252,7 +265,7 @@ class StealthBot:
         self.human_wait(0.5, 1)
 
     def human_wait(self, min_sec=1, max_sec=2):
-        time.sleep(min_sec + (max_sec - min_sec) * 0.5)
+        time.sleep(min_sec)# + (max_sec - min_sec) * 0.5)
 
     def quit(self):
         self.driver.quit()
@@ -267,44 +280,44 @@ def stop_task():
     return False
 
 def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
-    global status
-    status = 'running'
-    print("✅ 봇 실행")
-
-    bot = StealthBot()
-    bot.go('https://www.mule.co.kr/bbs/info/room')
     
-    def safe_shutdown(message=None):
-        global status
-        status = 'idle'
-        if message:
-            print(message)
-        bot.quit()
-        if on_all_done:
-            app.after(0, on_all_done)
-
-    # Login
-    try:
-        print("🔄 로그인 시도 중...")
-        res = bot.login()
-        if res == error.Error_Type.LOGINFAIL:
-            bot.quit()
-            if on_login_fail:
-                app.after(0, on_login_fail)
-            return
-    except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error) as e:
-        safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
-        return
-    except Exception as e:
-        print("❌ 로그인 중 예외 발생:", e)
-        traceback.print_exc()
-        safe_shutdown()
-        return
-
     def periodic_task():
         global status
+        status = 'running'
+        print("✅ 봇 실행")
+
         try:
             while True:
+                bot = StealthBot()
+                bot.go('https://www.mule.co.kr/bbs/info/room')
+                
+                def safe_shutdown(message=None):
+                    global status
+                    status = 'idle'
+                    if message:
+                        print(message)
+                    bot.quit()
+                    if on_all_done:
+                        app.after(0, on_all_done)
+
+                # Login
+                try:
+                    print("🔄 로그인 시도 중...")
+                    res = bot.login()
+                    if res == error.Error_Type.LOGINFAIL:
+                        bot.quit()
+                        if on_login_fail:
+                            app.after(0, on_login_fail)
+                        return
+                except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error) as e:
+                    safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
+                    return
+                except Exception as e:
+                    print("❌ 로그인 중 예외 발생:", e)
+                    traceback.print_exc()
+                    safe_shutdown()
+                    return
+        
                 print('✅ 작업 시작됨')
                 status = 'running'
                 try:
@@ -324,11 +337,12 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
                 status = 'idle'
 
                 print('✅ 6시간 후에 다시 시작합니다.')
+                bot.quit()
+
                 for i in range(loop_period_minute * 60): 
                     if status == 'stopped':
                         print("🛑 중단됨")
                         status = 'idle'
-                        bot.quit()
                         if on_all_done:
                             app.after(0, on_all_done)
                         return        
