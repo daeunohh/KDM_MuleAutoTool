@@ -22,17 +22,25 @@ from selenium.common.exceptions import TimeoutException
 app = None
 my_bbs = 'https://www.mule.co.kr/mymule/mybbs'
 status = 'idle'
-static_id = 'Libera2'
+static_ids = ['5ekdmsdl', 'Libera', 'Libera1', 'Libera2', 'Libera3']
 loop_period_minute = 6 * 60
 
 def set_app(_app):
     global app
     app = _app
 
-def is_id_valid(id):
-    if static_id in id or '5ekdmsdl' in id:
+def is_id_valid(user_id):
+    if not isinstance(user_id, str):
+        print("❌ 유효하지 않은 타입입니다. 문자열만 허용됩니다.")
+        return False
+
+    user_id = user_id.strip()
+
+    if user_id in static_ids:
         return True 
-    return False
+    else:
+        print(f"❌ '{user_id}'는 허용되지 않은 아이디입니다.")
+        return False
 
 def set_id(_id):
     if not is_id_valid(_id):
