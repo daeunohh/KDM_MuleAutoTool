@@ -54,7 +54,7 @@ class TextRedirector:
     def _get_tag_for_line(self, line: str):
         if any(x in line for x in ["✅"]):
             return "success"
-        elif any(x in line for x in ["❌", "🚨","🛑"]):
+        elif any(x in line for x in ["❌", "🚨","🛑","⚠"]):
             return "error"
         elif any(x in line for x in ["🔄"]):
             return "status"
@@ -64,35 +64,47 @@ class TextRedirector:
         pass
 
 def set_ui_state(running: bool):
-    if running:
-        id_entry.configure(state="disabled")
-        pw_entry.configure(state="disabled")
-        toggle_button.configure(state="disabled")
-        run_button.configure(state="disabled")
-        stop_button.configure(state="normal")
-    else:
-        id_entry.configure(state="normal")
-        pw_entry.configure(state="normal")
-        toggle_button.configure(state="normal")
-        run_button.configure(state="normal")
-        stop_button.configure(state="disabled")
+    for id_entry, pw_entry in id_pw_entries:
+        id_entry.configure(state="disabled" if running else "normal")
+        pw_entry.configure(state="disabled" if running else "normal")
+    # toggle_button.configure(state="disabled" if running else "normal")
+    run_button.configure(state="disabled" if running else "normal")
+    stop_button.configure(state="normal" if running else "disabled")
 
 def on_run_click():
     set_ui_state(True)
     webnavigator.set_app(app)
 
-    # 여러 줄 입력을 받아 처리
-    raw_ids = id_entry.get("1.0", "end").strip().splitlines()
-    raw_pws = pw_entry.get("1.0", "end").strip().splitlines()
+    id_pw_list = []
+    all_empty = True
+    invalid_rows = []
 
-    if len(raw_ids) != len(raw_pws):
-        print("❌ 아이디와 비밀번호 줄 수가 다릅니다.")
+    for idx, (id_entry, pw_entry) in enumerate(id_pw_entries):
+        uid = id_entry.get().strip()
+        pw = pw_entry.get().strip()
+
+        if uid or pw:
+            all_empty = False
+
+        if uid and pw:
+            id_pw_list.append((uid, pw))
+        elif uid or pw:
+            invalid_rows.append(idx + 1)  # 사용자에게 보여주기 위해 1-based 인덱스 사용
+
+    if all_empty:
+        print("❌ ID/PW가 모두 비어 있습니다. 최소 한 쌍 이상 입력해 주세요.")
+        set_ui_state(False)
+        return
+
+    if invalid_rows:
+        print(f"❌ 다음 입력칸에 ID 또는 PW가 누락되었습니다: {', '.join(map(str, invalid_rows))}번째")
+        print("⚠️ 모든 ID/PW 쌍이 정확히 입력되어야 작업이 시작됩니다.")
         set_ui_state(False)
         return
     
     def run_all():
         global n
-        for uid, pw in zip(raw_ids, raw_pws):
+        for uid, pw in id_pw_list:
             if webnavigator.set_id(uid) == error.Error_Type.ID:
                 print(f"❌ 아이디 오류: {uid}")
                 continue
@@ -152,7 +164,7 @@ ctk.set_default_color_theme("blue")  # 또는 "green", "dark-blue" 등
 
 # 앱 생성
 app = ctk.CTk()
-app.geometry("800x880")
+app.geometry("400x440")
 app.resizable(False, False)
 app.title("Mule posting autotool")
 app.protocol("WM_DELETE_WINDOW", on_close)
@@ -162,41 +174,30 @@ title_label = ctk.CTkLabel(app, text="물 홍보 자동화 프로그램 ver" + v
 title_label.pack(pady=(10, 5))
 
 id_pw_entries = []  # [(id_entry, pw_entry)] 리스트
+pw_entries = []  # 모든 PW entry들을 담기
 
+entry_frame = ctk.CTkFrame(app, fg_color="transparent")
+entry_frame.pack(padx=10, pady=5, fill="x")
 
-# ID 입력
-id_label = ctk.CTkLabel(app, text="아이디")
-id_label.pack(anchor="w", padx=20, pady=(20, 0))
-# id_entry = ctk.CTkEntry(app, placeholder_text="아이디 입력")
-id_entry = ctk.CTkTextbox(app, height=80)
-id_entry.pack(padx=20, fill="x")
-# id_entry.insert(0, "Libera")
+for i in range(4):  # 고정된 4쌍
+    row_frame = ctk.CTkFrame(entry_frame, fg_color="transparent")
+    row_frame.pack(fill="x", pady=2)  # 간격 좁게
 
-# PW 입력
-pw_label = ctk.CTkLabel(app, text="비밀번호")
-pw_label.pack(anchor="w", padx=20, pady=(10, 0))
-# 비밀번호 프레임 (입력칸 + 토글 버튼)
-pw_frame = ctk.CTkFrame(app, fg_color="transparent")
-pw_frame.pack(padx=20, fill="x")
-# 토글 버튼
-def toggle_pw_visibility():
-    if pw_entry.cget("show") == "*":
-        pw_entry.configure(show="")
-        toggle_button.configure(text="숨기기")
-    else:
-        pw_entry.configure(show="*")
-        toggle_button.configure(text="보기")
+    id_entry = ctk.CTkEntry(row_frame, placeholder_text=f"ID {i+1}")
+    id_entry.pack(side="left", expand=True, fill="x", padx=(0, 4))
 
-toggle_button = ctk.CTkButton(pw_frame, text="보기", fg_color="#2a2a2a", 
-                            hover_color="#444", width=60, command=toggle_pw_visibility)
-toggle_button.pack(side="right", padx=(5, 0))
+    pw_entry = ctk.CTkEntry(row_frame, placeholder_text=f"PW {i+1}") #, show="*")
+    pw_entry.pack(side="left", expand=True, fill="x", padx=(4, 0))
 
-# pw_entry = ctk.CTkEntry(pw_frame, placeholder_text="비밀번호 입력", show="*")
-pw_entry = ctk.CTkTextbox(app, height=80)
-pw_entry.pack(side="left", expand=True, fill="x")
+    id_pw_entries.append((id_entry, pw_entry))
+    # pw_entries.append(pw_entry)
+
+    # if i == 0:
+    #     toggle_button = ctk.CTkButton(row_frame, text="보기", width=60, command=toggle_all_pw)
+    #     toggle_button.pack(side="left", padx=(5, 0))
 
 button_frame = ctk.CTkFrame(app, fg_color="transparent")
-button_frame.pack(padx=20, pady=20, fill="x")
+button_frame.pack(padx=20, pady=10, fill="x")
 
 stop_button = ctk.CTkButton(button_frame, text="중지", fg_color="#2a2a2a", 
                             hover_color="#444", width=180, height=40,
@@ -206,11 +207,10 @@ stop_button.pack(side="left", padx=(0, 10))
 run_button = ctk.CTkButton(button_frame, text="실행", fg_color="#3B82F6",  
                            height=40,width=180,
                            command=on_run_click)
-
 run_button.pack(side="right", padx=(10, 0))
 
-log_box = ctk.CTkTextbox(app, width=380, height=200)
-log_box.pack(padx=20, pady=10)
+log_box = ctk.CTkTextbox(app)
+log_box.pack(padx=20, pady=10, fill="both", expand=True)
 
 sys.stdout = TextRedirector(log_box)
 sys.stderr = TextRedirector(log_box)
