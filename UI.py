@@ -5,6 +5,8 @@ import threading
 import sys
 import tkinter.messagebox as msgbox
 from datetime import datetime
+import time
+
 version_string = "1.07"
 n = 0
 
@@ -74,6 +76,7 @@ def set_ui_state(running: bool):
 def on_run_click():
     set_ui_state(True)
     webnavigator.set_app(app)
+    webnavigator.status = 'idle'
 
     id_pw_list = []
     all_empty = True
@@ -104,40 +107,61 @@ def on_run_click():
     
     def run_all():
         global n
-        for uid, pw in id_pw_list:
-            if webnavigator.set_id(uid) == error.Error_Type.ID:
-                print(f"❌ 아이디 오류: {uid}")
-                continue
+        while True:
+            if webnavigator.status == 'stopped':
+                break
 
-            if webnavigator.set_pw(pw) == error.Error_Type.PW:
-                print(f"❌ 비밀번호 오류: {uid}")
-                continue
+            print("🔄 작업 시작")
+            for uid, pw in id_pw_list:
+                if webnavigator.set_id(uid) == error.Error_Type.ID:
+                    print(f"❌ 아이디 오류: {uid}")
+                    continue
+
+                if webnavigator.set_pw(pw) == error.Error_Type.PW:
+                    print(f"❌ 비밀번호 오류: {uid}")
+                    continue
             
-            done_event = threading.Event()
+                done_event = threading.Event()
             
-            def login_fail_callback():
-                print(f"❌ 로그인 실패, 아이디/비밀번호 확인: {uid}")
-                done_event.set()  # 실패 시에도 다음으로 넘어감
+                def login_fail_callback():
+                    print(f"❌ 로그인 실패, 아이디/비밀번호 확인: {uid}")
+                    done_event.set()  # 실패 시에도 다음으로 넘어감
 
-            def task_finished_callback():
-                global n
-                n += 1
-                print("✅ 작업 " + str(n) + f"회 완료: {uid}")
-                done_event.set()
+                def task_finished_callback():
+                    global n
+                    n += 1
+                    print("✅ 작업 " + str(n) + f"회 완료: {uid}")
+                    done_event.set()
 
-            def all_done_callback():
-                global n
-                print("✅ 작업 중단됨")
-                n = 0
+                def all_done_callback():
+                    global n
+                    print("✅ 작업 중단됨")
+                    n = 0
+                    app.after(0, lambda: set_ui_state(False))
 
-            webnavigator.run_task(
-                on_login_fail=login_fail_callback,
-                on_task_finished=task_finished_callback,
-                on_all_done=all_done_callback
-            )
-            done_event.wait()
+                webnavigator.run_task(
+                    on_login_fail=login_fail_callback,
+                    on_task_finished=task_finished_callback,
+                    on_all_done=all_done_callback
+                )
+                done_event.wait()
+            
+            print("✅ 작업 완료")
+            if webnavigator.status != 'running':
+                break
+            
+            print("⏳ 다음 실행까지 6시간 대기합니다...")
+            webnavigator.status = 'idle'
+            for _ in range(6 * 60 * 60):  # 6시간 = 360분 
+                if webnavigator.status == 'stopped':
+                    break
+                if i % 3600 == 0 and i != 0:
+                    hours_left = (21600 - i) // 3600
+                    print(f"⌛ {hours_left}시간 후 실행됩니다.")
+                time.sleep(1)
 
-        print("✅ 전체 작업 완료")
+
+        print("🛑 반복 작업 종료됨")
         set_ui_state(False)
 
     threading.Thread(target=run_all, daemon=True).start()

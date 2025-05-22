@@ -287,85 +287,69 @@ def stop_task():
     status = 'stopped'
     return False
 
-def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
-    
-    def periodic_task():
+def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None): 
+    def single_task():
         global status
         status = 'running'
         print("✅ 봇 실행")
 
         try:
-            while True:
-                bot = StealthBot()
-                bot.go('https://www.mule.co.kr/bbs/info/room')
-                
-                def safe_shutdown(message=None):
-                    global status
-                    status = 'idle'
-                    if message:
-                        print(message)
-                    bot.quit()
-                    if on_all_done:
-                        app.after(0, on_all_done)
-
-                # Login
-                try:
-                    print("🔄 로그인 시도 중...")
-                    res = bot.login()
-                    if res == error.Error_Type.LOGINFAIL:
-                        bot.quit()
-                        if on_login_fail:
-                            app.after(0, on_login_fail)
-                        return
-                except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error) as e:
-                    safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
-                    return
-                except Exception as e:
-                    print("❌ 로그인 중 예외 발생:", e)
-                    traceback.print_exc()
-                    safe_shutdown()
-                    return
-        
-                print('✅ 작업 시작됨')
-                status = 'running'
-                try:
-                    bot.do_task()
-                except (NoSuchWindowException, WebDriverException) as e:
-                    safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
-                    return
-                except Exception as e:
-                    print("❌ 끌올 작업 중 예외 발생:", e)
-                    traceback.print_exc()
-                    safe_shutdown()
-                    return
-
-                if on_task_finished:
-                    app.after(0, on_task_finished)
-
+            bot = StealthBot()
+            bot.go('https://www.mule.co.kr/bbs/info/room')
+            
+            def safe_shutdown(message=None):
+                global status
                 status = 'idle'
-
-                print('✅ 6시간 후에 다시 시작합니다.')
+                if message:
+                    print(message)
                 bot.quit()
+                if on_all_done:
+                    app.after(0, on_all_done)
 
-                for i in range(loop_period_minute * 60): 
-                    if status == 'stopped':
-                        print("🛑 중단됨")
-                        status = 'idle'
-                        if on_all_done:
-                            app.after(0, on_all_done)
-                        return        
+            # Login
+            try:
+                print("🔄 로그인 시도 중...")
+                res = bot.login()
+                if res == error.Error_Type.LOGINFAIL:
+                    bot.quit()
+                    if on_login_fail:
+                        app.after(0, on_login_fail)
+                    return
+            except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error) as e:
+                safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
+                return
+            except Exception as e:
+                print("❌ 로그인 중 예외 발생:", e)
+                traceback.print_exc()
+                safe_shutdown()
+                return
+    
+            print('✅ 작업 시작됨')
+            status = 'running'
+            try:
+                bot.do_task()
+            except (NoSuchWindowException, WebDriverException) as e:
+                safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
+                return
+            except Exception as e:
+                print("❌ 끌올 작업 중 예외 발생:", e)
+                traceback.print_exc()
+                safe_shutdown()
+                return
 
-                    # ✅ 1시간마다 남은 시간 출력
-                    if i % 3600 == 0 and i != 0:
-                        hours_left = (loop_period_minute * 60 - i) // 3600
-                        print(f"⌛ {hours_left}시간 남았습니다.")
-                        
-                    time.sleep(1)
+            if on_task_finished:
+                app.after(0, on_task_finished)
+
+            status = 'idle'
+            bot.quit()
+
         except Exception as e:
-            print("❌ periodic_task() 전체에서 예외 발생:", e)
+            print("❌ run_task() 전체에서 예외 발생:", e)
             traceback.print_exc()
-            safe_shutdown()
+            if on_all_done:
+                app.after(0, on_all_done)
+            status = 'idle'
 
     # 스레드로 반복 작업 시작
-    threading.Thread(target=periodic_task, daemon=True).start()
+    single_task()
     return error.Error_Type.NONE
