@@ -317,9 +317,11 @@ def run_task(on_login_fail=None, on_task_finished=None, on_all_done=None):
                     return
             except (NoSuchWindowException, WebDriverException, ConnectionResetError, socket.error) as e:
                 safe_shutdown("🛑 사용자에 의해 브라우저가 닫혔습니다. 봇을 종료합니다." + str(e))
+                status = 'idle'
                 return
             except Exception as e:
                 print("❌ 로그인 중 예외 발생:", e)
+                status = 'idle'
                 traceback.print_exc()
                 safe_shutdown()
                 return

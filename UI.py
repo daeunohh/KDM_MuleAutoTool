@@ -4,11 +4,12 @@ import error
 import threading
 import sys
 import tkinter.messagebox as msgbox
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 
-version_string = "1.07"
+version_string = "1.08"
 n = 0
+inter_minutes = 60* 60
 
 class TextRedirector:
     def __init__(self, widget):
@@ -58,7 +59,7 @@ class TextRedirector:
             return "success"
         elif any(x in line for x in ["❌", "🚨","🛑","⚠"]):
             return "error"
-        elif any(x in line for x in ["🔄"]):
+        elif any(x in line for x in ["🔄", "⏳", "🚀"]):
             return "status"
         return "info"
 
@@ -105,14 +106,45 @@ def on_run_click():
         set_ui_state(False)
         return
     
+
     def run_all():
         global n
+        now = datetime.now()
+
+        # 각 ID의 다음 실행 예약 시간 초기화
+        next_run_time_map = {}
+        for i, (uid, pw) in enumerate(id_pw_list):
+            next_run_time_map[(uid, pw)] = now + timedelta(seconds=i * inter_minutes)  # ID 간 1시간 간격 예약
+
         while True:
             if webnavigator.status == 'stopped':
                 break
 
-            print("🔄 작업 시작")
-            for uid, pw in id_pw_list:
+            for idx, (uid, pw) in enumerate(id_pw_list):
+                # 중지 체크
+                if webnavigator.status == 'stopped':
+                    break
+
+                now = datetime.now()
+                next_time = next_run_time_map[(uid, pw)]
+
+                # 아직 실행 시간이 안 됐으면 대기
+                remaining = (next_time - now).total_seconds()
+                if remaining > 0:
+                    mins_left = int(remaining // 60)
+                    print(f"⏳ ID {idx+1} 실행까지 약 {mins_left}분 대기...")
+                    for _ in range(int(remaining)):
+                        if webnavigator.status == 'stopped':
+                            break
+                        time.sleep(1)
+
+                # 다시 한 번 중지 체크
+                if webnavigator.status == 'stopped':
+                    break
+                
+                print(f"🚀 [{idx+1}번째 ID] {uid} 작업 시작")
+
+                # ID 작업 실행
                 if webnavigator.set_id(uid) == error.Error_Type.ID:
                     print(f"❌ 아이디 오류: {uid}")
                     continue
@@ -120,17 +152,17 @@ def on_run_click():
                 if webnavigator.set_pw(pw) == error.Error_Type.PW:
                     print(f"❌ 비밀번호 오류: {uid}")
                     continue
-            
+
                 done_event = threading.Event()
-            
+
                 def login_fail_callback():
                     print(f"❌ 로그인 실패, 아이디/비밀번호 확인: {uid}")
-                    done_event.set()  # 실패 시에도 다음으로 넘어감
+                    done_event.set()
 
                 def task_finished_callback():
                     global n
                     n += 1
-                    print("✅ 작업 " + str(n) + f"회 완료: {uid}")
+                    print("✅ 작업 1회 완료")
                     done_event.set()
 
                 def all_done_callback():
@@ -139,30 +171,26 @@ def on_run_click():
                     n = 0
                     app.after(0, lambda: set_ui_state(False))
 
+                webnavigator.status = 'running'
                 webnavigator.run_task(
                     on_login_fail=login_fail_callback,
                     on_task_finished=task_finished_callback,
                     on_all_done=all_done_callback
                 )
                 done_event.wait()
-            
-            print("✅ 작업 완료")
-            if webnavigator.status != 'running':
-                break
-            
-            print("⏳ 다음 실행까지 6시간 대기합니다...")
-            webnavigator.status = 'idle'
-            for _ in range(6 * 60 * 60):  # 6시간 = 360분 
-                if webnavigator.status == 'stopped':
-                    break
-                if i % 3600 == 0 and i != 0:
-                    hours_left = (21600 - i) // 3600
-                    print(f"⌛ {hours_left}시간 후 실행됩니다.")
-                time.sleep(1)
+                webnavigator.status = 'idle'
 
+                # 다음 실행 시간 갱신: 현재 시간 + 6시간
+                next_run_time_map[(uid, pw)] = datetime.now() + timedelta(hours=6)
 
-        print("🛑 반복 작업 종료됨")
-        set_ui_state(False)
+            else:
+                print("🔄 모든 ID 순회 완료, 다음 라운드 준비 중...")
+        
+        try:
+            print("✅ 작업 중단됨")
+        except Exception as e:
+            print("❌ print 실패:", e)
+        
 
     threading.Thread(target=run_all, daemon=True).start()
 
@@ -214,11 +242,6 @@ for i in range(4):  # 고정된 4쌍
     pw_entry.pack(side="left", expand=True, fill="x", padx=(4, 0))
 
     id_pw_entries.append((id_entry, pw_entry))
-    # pw_entries.append(pw_entry)
-
-    # if i == 0:
-    #     toggle_button = ctk.CTkButton(row_frame, text="보기", width=60, command=toggle_all_pw)
-    #     toggle_button.pack(side="left", padx=(5, 0))
 
 button_frame = ctk.CTkFrame(app, fg_color="transparent")
 button_frame.pack(padx=20, pady=10, fill="x")
